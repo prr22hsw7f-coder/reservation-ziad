@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Réservation</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;800&display=swap">
+<style>
+:root{--bg:#f6f7f9;--surface:#fff;--ink:#14213d;--muted:#5b6478;--line:#dde1e9;--brand:#1b3a8a;--brand-ink:#fff;--soft:#e8edf9;--ok:#1d7a4d;--warn:#b4471b}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.5 "Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:860px;margin:0 auto;padding:24px 16px 48px}
+h1{font-size:clamp(28px,7vw,40px);line-height:1.1;font-weight:800;letter-spacing:-.02em;margin:8px 0 6px}
+h2{font-size:18px;margin:0 0 12px}
+.lead{color:var(--muted);margin:0 0 8px}
+.note{color:var(--muted);font-size:13px;margin:0 0 24px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:20px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.chip{font:500 14px inherit;color:var(--ink);background:var(--surface);border:1.5px solid var(--line);border-radius:99px;padding:7px 14px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th{text-align:left;font-size:13px;color:var(--muted);font-weight:600;padding:8px 10px;border-bottom:2px solid var(--line)}
+td{padding:12px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+td.act{text-align:right}
+@media (max-width:640px){thead{display:none}table,tbody,tr,td{display:block}tr{border:1.5px solid var(--line);border-radius:12px;padding:8px 12px;margin-bottom:10px}td{border:0;padding:4px 0;display:flex;justify-content:space-between;gap:12px;text-align:right}td::before{content:attr(data-l);color:var(--muted);text-align:left}td.act{justify-content:flex-end;padding-top:8px}td.act::before{content:none}}
+.left{font-size:13px;font-weight:600;white-space:nowrap}
+.left.low{color:var(--warn)}
+.btn{font:600 16px inherit;background:var(--brand);color:var(--brand-ink);border:0;border-radius:10px;padding:11px 20px;cursor:pointer}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.ghost{background:transparent;color:var(--brand);padding-left:0}
+.btn.sm{padding:8px 16px;font-size:14px}
+.bar{display:flex;justify-content:space-between;align-items:center;margin-top:16px;gap:12px}
+label{display:block;font-weight:600;font-size:14px;margin:0 0 6px}
+input{width:100%;font:inherit;color:inherit;background:var(--bg);border:1.5px solid var(--line);border-radius:10px;padding:11px;margin-bottom:14px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.err{color:var(--warn);font-size:14px;margin:-6px 0 12px}
+.empty{color:var(--muted);text-align:center;padding:12px 0;margin:0}
+dl{margin:0 0 16px;display:grid;grid-template-columns:auto 1fr;gap:6px 16px}
+dt{color:var(--muted)} dd{margin:0;font-weight:600;text-align:right}
+.ok{text-align:center}
+.tick{width:56px;height:56px;border-radius:50%;background:var(--ok);color:var(--surface);display:grid;place-items:center;font-size:28px;margin:0 auto 12px}
+.hidden{display:none}
+:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+</style>
+</head>
+<body>
+<main>
+  <h1>Réservation</h1>
+  <p class="lead">Réservez un créneau pour réviser à plusieurs, matière par matière. Vous pouvez aussi proposer le vôtre.</p>
+  <p class="note" id="syncnote">Chargement…</p>
+
+  <section id="list" class="panel">
+    <h2>Choisir un créneau</h2>
+    <div class="chips" id="chips"></div>
+    <div id="slots"></div>
+  </section>
+
+  <section id="join" class="panel hidden">
+    <h2>Confirmer ma place</h2>
+    <dl id="recap"></dl>
+    <label for="pn">Votre prénom</label><input id="pn" autocomplete="given-name">
+    <p class="err hidden" id="jerr"></p>
+    <div class="bar"><button class="btn ghost" id="jback">Retour</button><button class="btn" id="jgo">Réserver ma place</button></div>
+  </section>
+
+  <section id="done" class="panel ok hidden">
+    <div class="tick" aria-hidden="true">✓</div>
+    <h2 id="dtitle">Place réservée</h2>
+    <p class="lead" id="dmsg"></p>
+    <button class="btn" id="dback">Voir les créneaux</button>
+  </section>
+
+  <section id="add" class="panel">
+    <h2>Proposer un créneau</h2>
+    <div class="grid2">
+      <div><label for="am">Matière</label><input id="am" list="subs" placeholder="Ex. Maths, Espagnol, Philo…"><datalist id="subs"><option value="Maths"><option value="Français"><option value="Histoire-géo"><option value="Anglais"><option value="SVT"><option value="Physique-chimie"></datalist></div>
+      <div><label for="ap">Places au total</label><select id="ap"><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></div>
+      <div><label for="ad">Jour</label><input id="ad" placeholder="Ex. Mardi 7 octobre"></div>
+      <div><label for="ah">Heure</label><input id="ah" placeholder="Ex. 17 h 30"></div>
+    </div>
+    <label for="al">Lieu</label><input id="al" placeholder="Ex. CDI, salle 204, en ligne">
+    <label for="an">Votre prénom</label><input id="an" autocomplete="given-name">
+    <p class="err hidden" id="aerr"></p>
+    <button class="btn" id="ago">Publier mon créneau</button>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* ============================================================
+   À REMPLIR UNE SEULE FOIS, PAR VOUS UNIQUEMENT :
+   1. Créez un compte gratuit sur https://supabase.com puis un projet.
+   2. Dans l'onglet "SQL Editor", exécutez :
+
+      create table slots (
+        id uuid primary key default gen_random_uuid(),
+        matiere text not null,
+        jour text not null,
+        heure text not null,
+        lieu text not null,
+        max int not null,
+        noms text[] not null default '{}'
+      );
+      alter table slots enable row level security;
+      create policy "public read" on slots for select using (true);
+      create policy "public insert" on slots for insert with check (true);
+      create policy "public update" on slots for update using (true);
+
+   3. Dans Réglages -> API, copiez l'URL du projet et la clé "anon public"
+      et collez-les ci-dessous entre guillemets.
+   ============================================================ */
+const SUPABASE_URL = "COLLEZ_ICI_VOTRE_URL_SUPABASE";
+const SUPABASE_ANON_KEY = "COLLEZ_ICI_VOTRE_CLE_ANON";
+
+const MOIS=["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
+const $=id=>document.getElementById(id);
+const esc=s=>s.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+function guessDate(txt){
+  const m=(txt||"").toLowerCase().match(/(\d{1,2})\s+([a-zéû]+)/);
+  if(!m) return null;
+  const day=+m[1], mi=MOIS.findIndex(x=>x.startsWith(m[2].slice(0,4)));
+  if(mi<0) return null;
+  const now=new Date(), y=now.getFullYear();
+  let d=new Date(y,mi,day,23,59,0);
+  if(d < new Date(now.getFullYear(),now.getMonth(),now.getDate())) d=new Date(y+1,mi,day,23,59,0);
+  return d;
+}
+function isPast(txt){const d=guessDate(txt);return d?d.getTime()<Date.now():false}
+
+let slots=[], filt="Toutes", cur=null, sb=null, configured=false;
+
+function chips(){$("chips").innerHTML="";["Toutes",...new Set(slots.map(x=>x.matiere))].forEach(s=>{const b=document.createElement("button");
+  b.className="chip";b.textContent=s;b.setAttribute("aria-pressed",s===filt);b.onclick=()=>{filt=s;render()};$("chips").appendChild(b)})}
+
+function render(){
+  chips();
+  const box=$("slots");box.innerHTML="";
+  const list=slots.filter(s=>filt==="Toutes"||s.matiere===filt);
+  if(!list.length){box.innerHTML='<p class="empty">Aucun créneau pour l\u2019instant. Proposez-en un avec le formulaire en bas de page.</p>';return}
+  const t=document.createElement("table");
+  t.innerHTML="<thead><tr><th>Matière</th><th>Jour</th><th>Heure</th><th>Lieu</th><th>Places</th><th>Inscrits</th><th></th></tr></thead>";
+  const tb=document.createElement("tbody");
+  list.forEach(s=>{const n=s.noms||[],free=s.max-n.length,tr=document.createElement("tr");
+    tr.innerHTML=`<td data-l="Matière"><b>${esc(s.matiere)}</b></td><td data-l="Jour">${esc(s.jour)}</td><td data-l="Heure">${esc(s.heure)}</td><td data-l="Lieu">${esc(s.lieu)}</td><td data-l="Places" class="left ${free<=1?"low":""}">${free?free+" libre"+(free>1?"s":"")+" sur "+s.max:"Complet"}</td><td data-l="Inscrits">${n.length?n.map(esc).join(", "):"Personne"}</td><td class="act"></td>`;
+    if(free){const b=document.createElement("button");b.className="btn sm";b.textContent="Réserver";
+      b.onclick=()=>{cur=s.id;openJoin()};tr.lastChild.appendChild(b)}
+    tb.appendChild(tr)});
+  t.appendChild(tb);box.appendChild(t);
+}
+
+function panels(k){["list","join","done"].forEach(x=>$(x).classList.toggle("hidden",x!==k));$("add").classList.toggle("hidden",k!=="list");window.scrollTo(0,0)}
+
+function openJoin(){const s=slots.find(x=>x.id===cur);if(!s)return;
+  $("recap").innerHTML=`<dt>Matière</dt><dd>${esc(s.matiere)}</dd><dt>Quand</dt><dd>${esc(s.jour)}, ${esc(s.heure)}</dd><dt>Lieu</dt><dd>${esc(s.lieu)}</dd>`;
+  $("pn").value="";$("jerr").classList.add("hidden");panels("join")}
+$("jback").onclick=()=>panels("list");
+
+async function reload(){
+  const {data,error}=await sb.from("slots").select("*").order("jour");
+  if(error){ $("syncnote").textContent="Connexion au stockage impossible : "+error.message; return }
+  slots=(data||[]).filter(s=>!isPast(s.jour));
+  render();
+}
+
+$("jgo").onclick=async ()=>{
+  const s=slots.find(x=>x.id===cur), name=$("pn").value.trim(), e=$("jerr");
+  if(!s) return;
+  if(!name){e.textContent="Saisissez votre prénom pour réserver.";e.classList.remove("hidden");return}
+  const n=s.noms||[];
+  if(n.some(x=>x.toLowerCase()===name.toLowerCase())){e.textContent="Ce prénom est déjà inscrit sur ce créneau.";e.classList.remove("hidden");return}
+  if(n.length>=s.max){e.textContent="Ce créneau vient d'être complété. Choisissez-en un autre.";e.classList.remove("hidden");return}
+  const {error}=await sb.from("slots").update({noms:[...n,name]}).eq("id",s.id);
+  if(error){e.textContent="La réservation n'a pas pu être enregistrée, réessayez.";e.classList.remove("hidden");return}
+  $("dtitle").textContent="Place réservée";
+  $("dmsg").textContent=`${name}, votre place est réservée : ${s.matiere}, ${s.jour.toLowerCase()} à ${s.heure}, ${s.lieu}.`;
+  cur=null; panels("done");
+};
+$("dback").onclick=()=>{panels("list")};
+
+$("ago").onclick=async ()=>{
+  const g=id=>$(id).value.trim(), e=$("aerr");
+  if(!g("am")||!g("ad")||!g("ah")||!g("al")||!g("an")){e.textContent="Renseignez la matière, le jour, l'heure, le lieu et votre prénom.";e.classList.remove("hidden");return}
+  e.classList.add("hidden");
+  const {error}=await sb.from("slots").insert({matiere:g("am"),jour:g("ad"),heure:g("ah"),lieu:g("al"),max:+g("ap"),noms:[g("an")]});
+  if(error){e.textContent="Le créneau n'a pas pu être publié, réessayez.";e.classList.remove("hidden");return}
+  ["ad","ah","al","an"].forEach(i=>$(i).value=""); $("am").value=""; filt=g("am")||filt; $("list").scrollIntoView();
+};
+
+function init(){
+  configured = SUPABASE_URL.startsWith("http") && SUPABASE_ANON_KEY.length>20;
+  if(!configured){
+    $("syncnote").textContent="Le stockage n'est pas encore configuré (voir les instructions en haut du code du fichier).";
+    return;
+  }
+  sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  $("syncnote").textContent="Les créneaux sont visibles par tout le monde et sauvegardés en ligne.";
+  reload();
+  sb.channel("slots-changes").on("postgres_changes",{event:"*",schema:"public",table:"slots"},reload).subscribe();
+}
+init();
+</script>
+</body>
+</html>
